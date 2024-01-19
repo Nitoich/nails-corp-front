@@ -1,6 +1,18 @@
 <script setup>
 
-const create = () => {};
+import Selector from "@/components/UI/Inputs/Selector.vue";
+import {ref} from "vue";
+import {useProductsStore} from "@/stores/products";
+
+const product = ref(null);
+const ProductStore = useProductsStore();
+ProductStore.getProducts();
+
+const create = () => {
+  console.log(product.value)
+};
+
+let errors = null;
 
 </script>
 
@@ -10,7 +22,7 @@ const create = () => {};
     <input type="text" placeholder="ФИО">
     <input type="date" placeholder="Дата">
     <input type="time" placeholder="Время">
-    <input type="text" placeholder="Услуга (gag)">
+    <Selector v-model="product" :items="ProductStore.selectorProducts" />
     <input type="submit" value="Создать">
   </form>
 </template>

@@ -53,30 +53,39 @@ export const useApiStore = defineStore('apiStore', () => {
         return data.data;
     };
 
-    const get = async(url, params = {}, onFailure = () => {}) => {
-        const res = await fetch(`${apiLink}${url}?${new URLSearchParams(params).toString()}`, {
-            method: 'GET',
-            headers: {
-                "Accept": 'application/json',
-                "Authorization": `Bearer ${access_token.value}`
-            }
-        })
+    const request = async(url, method, options, onFailure) => {
+        if(typeof options.params === "undefined") { options.params = {}; }
+        if(typeof options.body === "undefined") { options.body = {}; }
+        if(typeof options.headers === "undefined") { options.headers = {}; }
 
+        const request_options = {
+            method,
+            headers: {
+                "Accept": "application/json",
+                "Authorization": `Bearer ${access_token.value}`,
+                "Content-Type": "application/json"
+            },
+        };
+
+        if(method.toLowerCase() !== "get") { request_options.body = JSON.stringify(options.body); }
+        if(Object.keys(options.headers).length === 0) {
+            request_options.headers = {
+                ...request_options.headers,
+                ...options.headers
+            };
+        }
+
+        const res = await fetch(`${apiLink}${url}?${new URLSearchParams(options.params).toString()}`, request_options);
         if(res.status >= 400) {
             switch (res.status) {
                 case 401:
                 case 403:
-
                     if(canRefresh.value) {
                         canRefresh.value = false;
                         let success = true;
-                        await refresh(() => {
-                            success = false;
-                        });
-                        console.log("Failed response!")
-
+                        await refresh(() => { success = false; });
                         canRefresh.value = true;
-                        if(success) { await get(url, params, onFailure); }
+                        if(success) { await request(url, method, options, onFailure) }
                         else { onFailure(res); }
                     }
                     break;
@@ -88,6 +97,14 @@ export const useApiStore = defineStore('apiStore', () => {
 
         const data = await res.json();
         return data.data;
+    };
+
+    const get = async(url, params = {}, onFailure = () => {}) => {
+        return await request(url, "get", { params }, onFailure);
+    };
+
+    const post = async(url, body, onFailure = () => {}) => {
+        return await request(url, "post", { body }, onFailure)
     };
 
     return {
